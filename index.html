@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEON://RANK — AI Model Leaderboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#05060f;
+    --bg-2:#0a0c1c;
+    --panel:#0d1024;
+    --panel-2:#11142e;
+    --ink:#e8ecff;
+    --muted:#7b83ad;
+    --line:rgba(120,140,255,.16);
+    --cyan:#00f0ff;
+    --magenta:#ff2d95;
+    --purple:#a855f7;
+    --lime:#c8ff3e;
+    --amber:#ffb020;
+    --grid:rgba(0,240,255,.05);
+    --glow-cyan:0 0 18px rgba(0,240,255,.55);
+    --glow-mag:0 0 18px rgba(255,45,149,.55);
+    --radius:4px;
+    --font-display:'Orbitron','Noto Sans TC','Rajdhani',system-ui,sans-serif;
+    --font-body:'Rajdhani','Noto Sans TC',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --font-mono:'Share Tech Mono',ui-monospace,'Cascadia Code',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.45;
+    overflow-x:hidden;
+    position:relative;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* layered cyberpunk background */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-3;
+    background:
+      radial-gradient(900px 500px at 12% -8%, rgba(0,240,255,.14), transparent 60%),
+      radial-gradient(800px 600px at 92% 8%, rgba(255,45,149,.13), transparent 55%),
+      radial-gradient(700px 700px at 50% 120%, rgba(168,85,247,.12), transparent 60%),
+      var(--bg);
+  }
+  body::after{ /* grid */
+    content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:44px 44px;
+    mask-image:radial-gradient(circle at 50% 30%,#000 40%,transparent 85%);
+    -webkit-mask-image:radial-gradient(circle at 50% 30%,#000 40%,transparent 85%);
+  }
+  .scanline{
+    position:fixed;left:0;right:0;height:120px;z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(0,240,255,.06),transparent);
+    animation:scan 7s linear infinite;
+  }
+  @keyframes scan{0%{transform:translateY(-140px)}100%{transform:translateY(100vh)}}
+
+  .wrap{max-width:1280px;margin:0 auto;padding:26px 22px 90px}
+
+  /* ---------- header ---------- */
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:20px;
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{
+    width:46px;height:46px;display:grid;place-items:center;position:relative;
+    border:1px solid var(--cyan);color:var(--cyan);
+    font-family:var(--font-display);font-weight:900;font-size:20px;
+    clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);
+    box-shadow:var(--glow-cyan);background:rgba(0,240,255,.06);
+  }
+  .logo::after{content:"";position:absolute;inset:0;border:1px solid var(--magenta);opacity:.35;
+    clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);transform:translate(3px,3px)}
+  .brand h1{font-family:var(--font-display);font-weight:900;font-size:24px;letter-spacing:2px;line-height:1}
+  .brand h1 b{color:var(--cyan);text-shadow:var(--glow-cyan)}
+  .brand p{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:3px;margin-top:4px}
+
+  .searchbox{position:relative;flex:1 1 320px;max-width:460px;min-width:240px}
+  .searchbox input{
+    width:100%;background:rgba(8,10,26,.8);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--font-mono);font-size:14px;padding:13px 14px 13px 40px;letter-spacing:.5px;
+    clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+    transition:border-color .2s,box-shadow .2s;
+  }
+  .searchbox input::placeholder{color:var(--muted)}
+  .searchbox input:focus{outline:none;border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+  .searchbox .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--cyan);font-family:var(--font-mono);font-size:15px}
+
+  /* ---------- toolbar ---------- */
+  .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:1px;cursor:pointer;
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:8px 14px;transition:.18s;user-select:none;
+  }
+  .chip:hover{color:var(--ink);border-color:var(--cyan)}
+  .chip.active{color:#04121a;background:var(--cyan);border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+
+  .spacer{flex:1}
+  .sortctl{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12px;color:var(--muted);letter-spacing:1px}
+  .sortctl select{
+    background:rgba(8,10,26,.9);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--font-mono);font-size:13px;padding:9px 10px;cursor:pointer;
+  }
+  .sortctl select:focus{outline:none;border-color:var(--cyan)}
+  .dirbtn{
+    background:transparent;border:1px solid var(--line);color:var(--cyan);cursor:pointer;
+    width:38px;height:36px;font-family:var(--font-mono);font-size:15px;transition:.18s;
+  }
+  .dirbtn:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+  .langbtn{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:1px;cursor:pointer;
+    background:transparent;border:1px solid var(--line);color:var(--cyan);
+    padding:9px 14px;transition:.18s;white-space:nowrap;
+  }
+  .langbtn:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+  .count{font-family:var(--font-mono);font-size:12px;color:var(--muted);letter-spacing:1px}
+  .count b{color:var(--lime)}
+
+  /* ---------- grid of cards ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .card{
+    position:relative;background:linear-gradient(180deg,var(--panel),var(--bg-2));
+    border:1px solid var(--line);padding:16px 16px 14px;
+    clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+    transition:transform .18s,border-color .2s,box-shadow .2s;
+    display:flex;flex-direction:column;gap:12px;overflow:hidden;
+  }
+  .card::before{ /* top neon strip */
+    content:"";position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,var(--cyan),var(--magenta));opacity:.7;
+  }
+  .card:hover{transform:translateY(-4px);border-color:rgba(0,240,255,.6);box-shadow:0 10px 30px rgba(0,0,0,.5),var(--glow-cyan)}
+  .card.selected{border-color:var(--magenta);box-shadow:0 0 0 1px var(--magenta),var(--glow-mag)}
+  .card.selected::before{background:linear-gradient(90deg,var(--magenta),var(--purple))}
+
+  .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .rank{
+    font-family:var(--font-display);font-weight:900;font-size:22px;line-height:1;
+    color:var(--muted);min-width:44px;text-align:center;padding-top:2px;
+  }
+  .card:nth-child(1) .rank{color:var(--cyan);text-shadow:var(--glow-cyan)}
+  .card:nth-child(2) .rank{color:var(--magenta);text-shadow:var(--glow-mag)}
+  .card:nth-child(3) .rank{color:var(--lime)}
+  .rank small{display:block;font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:3px}
+
+  .nameblk{flex:1;min-width:0}
+  .model-name{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:.5px;line-height:1.15;word-break:break-word}
+  .org{font-family:var(--font-mono);font-size:11px;color:var(--cyan);letter-spacing:1px;margin-top:3px}
+
+  .cmp-toggle{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:1px;cursor:pointer;
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:6px 9px;transition:.18s;white-space:nowrap;
+  }
+  .cmp-toggle:hover{border-color:var(--magenta);color:var(--ink)}
+  .card.selected .cmp-toggle{background:var(--magenta);border-color:var(--magenta);color:#1a0410;box-shadow:var(--glow-mag)}
+
+  .score-row{display:flex;align-items:baseline;gap:8px}
+  .score-num{font-family:var(--font-display);font-weight:900;font-size:34px;line-height:1;color:var(--ink);text-shadow:0 0 14px rgba(0,240,255,.35)}
+  .score-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--muted)}
+
+  .bars{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+  .bar-row{display:grid;grid-template-columns:64px 1fr 40px;align-items:center;gap:8px}
+  .bar-lbl{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.5px}
+  .bar-track{height:7px;background:rgba(120,140,255,.12);position:relative;overflow:hidden}
+  .bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+  .bar-val{font-family:var(--font-mono);font-size:11px;color:var(--ink);text-align:right}
+
+  .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .tag{font-family:var(--font-mono);font-size:10px;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line);padding:4px 8px;background:rgba(255,255,255,.02)}
+  .tag b{color:var(--ink);font-weight:400}
+
+  /* ---------- compare tray ---------- */
+  .tray{
+    position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(140%);
+    display:flex;align-items:center;gap:12px;z-index:40;
+    background:rgba(10,12,28,.96);border:1px solid var(--magenta);box-shadow:var(--glow-mag);
+    padding:10px 14px;transition:transform .3s cubic-bezier(.2,.8,.2,1);backdrop-filter:blur(6px);
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  }
+  .tray.show{transform:translateX(-50%) translateY(0)}
+  .tray .lbl{font-family:var(--font-mono);font-size:12px;letter-spacing:1px;color:var(--ink)}
+  .tray .lbl b{color:var(--magenta)}
+  .tray button{font-family:var(--font-mono);font-size:12px;letter-spacing:1px;cursor:pointer;padding:9px 14px;border:1px solid var(--line);background:transparent;color:var(--ink);transition:.18s}
+  .tray button.go{background:var(--magenta);border-color:var(--magenta);color:#1a0410;box-shadow:var(--glow-mag)}
+  .tray button.go:hover{filter:brightness(1.1)}
+
+  /* ---------- compare modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(3,4,12,.82);backdrop-filter:blur(4px);z-index:50;display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto}
+  .overlay.show{display:flex}
+  .modal{
+    width:100%;max-width:1040px;background:linear-gradient(180deg,var(--panel),var(--bg-2));
+    border:1px solid var(--cyan);box-shadow:0 0 40px rgba(0,240,255,.25);
+    clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,20px 100%,0 calc(100% - 20px));
+    padding:22px;animation:pop .25s ease;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .modal-head h2{font-family:var(--font-display);font-weight:900;font-size:20px;letter-spacing:2px;color:var(--cyan);text-shadow:var(--glow-cyan)}
+  .modal-head .x{cursor:pointer;background:transparent;border:1px solid var(--line);color:var(--ink);width:36px;height:36px;font-family:var(--font-mono);font-size:16px;transition:.18s}
+  .modal-head .x:hover{border-color:var(--magenta);color:var(--magenta)}
+
+  .cmp-table{width:100%;border-collapse:collapse;font-family:var(--font-mono)}
+  .cmp-table th,.cmp-table td{text-align:left;padding:12px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .cmp-table thead th{font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.5px;color:var(--ink)}
+  .cmp-table thead th small{display:block;font-family:var(--font-mono);font-size:10px;color:var(--cyan);letter-spacing:1px;margin-top:3px}
+  .cmp-table tbody th{font-family:var(--font-mono);font-size:12px;color:var(--muted);letter-spacing:.5px;font-weight:400;white-space:nowrap}
+  .cmp-table td{font-size:13px;color:var(--ink)}
+  .cmp-bar-wrap{min-width:180px}
+  .cmp-bar-track{height:10px;background:rgba(120,140,255,.12);position:relative;overflow:hidden;margin-top:6px}
+  .cmp-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .best{color:var(--lime)!important;text-shadow:0 0 10px rgba(200,255,62,.4)}
+  .best::after{content:" ★";font-size:10px}
+
+  .empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px}
+  .empty b{display:block;font-family:var(--font-display);font-size:20px;color:var(--ink);margin-bottom:8px;letter-spacing:2px}
+
+  footer.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px}
+
+  @media (max-width:640px){
+    .brand h1{font-size:20px}
+    .score-num{font-size:30px}
+    .cmp-table th,.cmp-table td{padding:9px 8px}
+    .cmp-bar-wrap{min-width:120px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .scanline{animation:none}
+    *{transition:none!important;animation-duration:.001s!important}
+  }
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo">NR</div>
+      <div>
+        <h1>NEON<b>://</b>RANK</h1>
+        <p id="brandSub">AI MODEL LEADERBOARD // v2.6</p>
+      </div>
+    </div>
+    <div class="searchbox">
+      <span class="ic">⌕</span>
+      <input id="search" type="text" placeholder="SEARCH MODEL / ORG / TAG…" autocomplete="off" spellcheck="false" />
+    </div>
+    <button class="langbtn" id="langBtn" title="切換語言 / Switch language">中</button>
+  </header>
+
+  <div class="toolbar">
+    <div class="chips" id="chips"></div>
+    <div class="spacer"></div>
+    <span class="count" id="count"></span>
+    <div class="sortctl">
+      <label for="sortKey" id="sortLbl">SORT</label>
+      <select id="sortKey">
+        <option value="overall">OVERALL SCORE</option>
+        <option value="mmlu">MMLU</option>
+        <option value="gpqa">GPQA</option>
+        <option value="humaneval">HUMANEVAL</option>
+        <option value="math">MATH</option>
+        <option value="context">CONTEXT LEN</option>
+        <option value="params">PARAMS</option>
+      </select>
+      <button class="dirbtn" id="dirBtn" title="toggle direction">↓</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer class="foot">
+    <span id="footTxt">NEON://RANK — benchmark values are illustrative demo data</span>
+    <span id="clock"></span>
+  </footer>
+</div>
+
+<!-- compare tray -->
+<div class="tray" id="tray">
+  <span class="lbl" id="trayLbl">SELECTED <b id="trayCount">0</b></span>
+  <button id="trayClear">CLEAR</button>
+  <button class="go" id="trayGo">COMPARE ▸</button>
+</div>
+
+<!-- compare modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cmpTitle">PERFORMANCE COMPARISON</h2>
+      <button class="x" id="modalClose" title="close">✕</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cmp-table" id="cmpTable"></table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- dataset (illustrative benchmark values) ----
+  const MODELS = [
+    {name:"GPT-4o", org:"OpenAI", overall:88.4, mmlu:88.7, gpqa:72.3, humaneval:90.2, math:76.6, context:128000, params:55, license:"Proprietary", tags:["reasoning","multimodal"]},
+    {name:"Claude 3.5 Sonnet", org:"Anthropic", overall:89.1, mmlu:88.3, gpqa:74.9, humaneval:92.0, math:78.4, context:200000, params:0, license:"Proprietary", tags:["reasoning","coding"]},
+    {name:"Gemini 1.5 Pro", org:"Google", overall:86.9, mmlu:87.7, gpqa:71.4, humaneval:89.5, math:74.2, context:1000000, params:0, license:"Proprietary", tags:["reasoning","multimodal"]},
+    {name:"Llama 3.1 405B", org:"Meta", overall:85.2, mmlu:86.9, gpqa:67.2, humaneval:88.4, math:72.8, context:128000, params:405, license:"Llama-3.1", tags:["open-weights","reasoning"]},
+    {name:"DeepSeek V3", org:"DeepSeek", overall:84.6, mmlu:87.5, gpqa:69.1, humaneval:90.8, math:84.1, context:128000, params:671, license:"MIT", tags:["open-weights","math"]},
+    {name:"Grok-2", org:"xAI", overall:83.7, mmlu:85.1, gpqa:65.8, humaneval:87.9, math:70.3, context:131072, params:0, license:"Proprietary", tags:["reasoning"]},
+    {name:"Mistral Large 2", org:"Mistral AI", overall:81.4, mmlu:83.6, gpqa:61.2, humaneval:85.7, math:66.9, context:128000, params:123, license:"Proprietary", tags:["reasoning","coding"]},
+    {name:"Qwen 2.5 72B", org:"Alibaba", overall:82.8, mmlu:84.9, gpqa:63.5, humaneval:88.1, math:79.6, context:131072, params:72, license:"Apache-2.0", tags:["open-weights","math"]},
+    {name:"Command R+", org:"Cohere", overall:79.5, mmlu:81.4, gpqa:56.8, humaneval:83.2, math:61.5, context:128000, params:104, license:"Proprietary", tags:["coding","rag"]},
+    {name:"Llama 3.1 70B", org:"Meta", overall:78.9, mmlu:81.9, gpqa:54.3, humaneval:84.6, math:58.7, context:128000, params:70, license:"Llama-3.1", tags:["open-weights"]},
+    {name:"Gemma 2 27B", org:"Google", overall:74.2, mmlu:77.6, gpqa:45.9, humaneval:80.3, math:52.1, context:8192, params:27, license:"Gemma-2", tags:["open-weights","edge"]},
+    {name:"Phi-3 Medium", org:"Microsoft", overall:71.8, mmlu:74.9, gpqa:40.2, humaneval:78.5, math:63.4, context:12288, params:14, license:"MIT", tags:["edge","math"]},
+  ];
+
+  const BENCHES = [
+    {key:"mmlu", label:"MMLU", color:"var(--cyan)"},
+    {key:"gpqa", label:"GPQA", color:"var(--magenta)"},
+    {key:"humaneval", label:"HUMANEVAL", color:"var(--purple)"},
+    {key:"math", label:"MATH", color:"var(--lime)"},
+  ];
+
+  const CATS = [
+    {id:"all", label:"ALL", zh:"全部"},
+    {id:"reasoning", label:"REASONING", zh:"推理"},
+    {id:"coding", label:"CODING", zh:"程式碼"},
+    {id:"math", label:"MATH", zh:"數學"},
+    {id:"open-weights", label:"OPEN-WEIGHTS", zh:"開放權重"},
+  ];
+
+  // ---- i18n ----
+  const I18N = {
+    en: {
+      brandSub:"AI MODEL LEADERBOARD // v2.6",
+      searchPh:"SEARCH MODEL / ORG / TAG…",
+      sortLbl:"SORT",
+      sortOpts:{overall:"OVERALL SCORE", mmlu:"MMLU", gpqa:"GPQA", humaneval:"HUMANEVAL", math:"MATH", context:"CONTEXT LEN", params:"PARAMS"},
+      countShow:"SHOWING",
+      emptyTitle:"NO SIGNAL",
+      emptyBody:function(q,cat){ return 'no model matches “'+q+'” in '+cat; },
+      rankLbl:"RANK",
+      overallLbl:"OVERALL<br>COMPOSITE",
+      cmpAdd:"+ CMP", cmpIn:"✓ IN SET",
+      tagCtx:"CTX", tagParams:"PARAMS", tagLicense:"LICENSE",
+      paramsUndisclosed:"undisclosed",
+      traySelected:"SELECTED", trayClear:"CLEAR", trayGo:"COMPARE ▸",
+      maxMsg:"MAX 4 MODELS",
+      cmpTitle:"PERFORMANCE COMPARISON",
+      rowOverall:"OVERALL", rowContext:"CONTEXT", rowParams:"PARAMS", rowLicense:"LICENSE",
+      footTxt:"NEON://RANK — benchmark values are illustrative demo data",
+      clockPre:"SYS.TIME ", clockTz:" TPE",
+      langBtn:"中",
+    },
+    zh: {
+      brandSub:"AI 模型排行榜 // v2.6",
+      searchPh:"搜尋模型 / 機構 / 標籤…",
+      sortLbl:"排序",
+      sortOpts:{overall:"總分", mmlu:"MMLU", gpqa:"GPQA", humaneval:"HUMANEVAL", math:"數學", context:"上下文長度", params:"參數量"},
+      countShow:"顯示",
+      emptyTitle:"無結果",
+      emptyBody:function(q,cat){ return '沒有模型符合「'+q+'」（分類：'+cat+'）'; },
+      rankLbl:"排名",
+      overallLbl:"總分<br>綜合",
+      cmpAdd:"+ 對比", cmpIn:"✓ 已選",
+      tagCtx:"上下文", tagParams:"參數", tagLicense:"授權",
+      paramsUndisclosed:"未公開",
+      traySelected:"已選", trayClear:"清除", trayGo:"開始對比 ▸",
+      maxMsg:"最多 4 個模型",
+      cmpTitle:"效能對比",
+      rowOverall:"總分", rowContext:"上下文", rowParams:"參數", rowLicense:"授權",
+      footTxt:"NEON://RANK — 基準測試數值為示範資料",
+      clockPre:"系統時間 ", clockTz:" 台北",
+      langBtn:"EN",
+    },
+  };
+
+  // ---- state ----
+  const state = { q:"", cat:"all", sortKey:"overall", dir:"desc", selected:new Set(), lang:localStorage.getItem("nr_lang")||"en" };
+
+  function t(){ return I18N[state.lang]; }
+  function catLabel(id){
+    const c = CATS.find(x=>x.id===id);
+    if(!c) return id;
+    return state.lang==="zh" ? c.zh : c.label;
+  }
+
+  // ---- helpers ----
+  const $ = s => document.querySelector(s);
+  function fmtCtx(n){ if(!n) return "—"; if(n>=1000) return (n/1000).toLocaleString("en-US",{maximumFractionDigits:1})+"K"; return n.toLocaleString(); }
+  function fmtParams(n){ if(!n) return t().paramsUndisclosed; return n+"B"; }
+
+  function filtered(){
+    const q = state.q.trim().toLowerCase();
+    let list = MODELS.filter(m=>{
+      if(state.cat!=="all" && !m.tags.includes(state.cat)) return false;
+      if(!q) return true;
+      return (m.name+" "+m.org+" "+m.license+" "+m.tags.join(" ")).toLowerCase().includes(q);
+    });
+    const dir = state.dir==="asc" ? 1 : -1;
+    list.sort((a,b)=>{
+      let av=a[state.sortKey], bv=b[state.sortKey];
+      if(av===bv) return b.overall-a.overall;
+      return (av-bv)*dir;
+    });
+    return list;
+  }
+
+  // ---- render chips ----
+  function renderChips(){
+    const box = $("#chips");
+    box.innerHTML = "";
+    CATS.forEach(c=>{
+      const el = document.createElement("button");
+      el.className = "chip"+(state.cat===c.id?" active":"");
+      el.textContent = state.lang==="zh" ? c.zh : c.label;
+      el.onclick = ()=>{ state.cat=c.id; renderChips(); renderGrid(); };
+      box.appendChild(el);
+    });
+  }
+
+  // ---- render grid ----
+  function renderGrid(){
+    const grid = $("#grid");
+    const list = filtered();
+    grid.innerHTML = "";
+    $("#count").innerHTML = t().countShow+" <b>"+list.length+"</b> / "+MODELS.length;
+
+    if(!list.length){
+      grid.innerHTML = '<div class="empty"><b>'+t().emptyTitle+'</b>'+t().emptyBody(state.q.replace(/</g,"&lt;"),catLabel(state.cat))+'</div>';
+      return;
+    }
+
+    list.forEach((m,i)=>{
+      const card = document.createElement("article");
+      card.className = "card"+(state.selected.has(m.name)?" selected":"");
+      card.dataset.name = m.name;
+
+      let barsHtml = BENCHES.map(b=>{
+        const v = m[b.key];
+        return '<div class="bar-row"><span class="bar-lbl">'+b.label+'</span>'+
+               '<span class="bar-track"><span class="bar-fill" data-w="'+v+'" style="background:'+b.color+';box-shadow:0 0 8px '+b.color+'"></span></span>'+
+               '<span class="bar-val">'+v.toFixed(1)+'</span></div>';
+      }).join("");
+
+      card.innerHTML =
+        '<div class="card-head">'+
+          '<div class="rank">'+String(i+1).padStart(2,"0")+'<small>'+t().rankLbl+'</small></div>'+
+          '<div class="nameblk"><div class="model-name">'+m.name+'</div><div class="org">'+m.org.toUpperCase()+'</div></div>'+
+          '<button class="cmp-toggle" data-cmp="'+m.name+'">'+(state.selected.has(m.name)?t().cmpIn:t().cmpAdd)+'</button>'+
+        '</div>'+
+        '<div class="score-row"><span class="score-num">'+m.overall.toFixed(1)+'</span><span class="score-lbl">'+t().overallLbl+'</span></div>'+
+        '<div class="bars">'+barsHtml+'</div>'+
+        '<div class="meta">'+
+          '<span class="tag">'+t().tagCtx+' <b>'+fmtCtx(m.context)+'</b></span>'+
+          '<span class="tag">'+t().tagParams+' <b>'+fmtParams(m.params)+'</b></span>'+
+          '<span class="tag">'+t().tagLicense+' <b>'+m.license+'</b></span>'+
+        '</div>';
+
+      grid.appendChild(card);
+    });
+
+    // animate bars in
+    requestAnimationFrame(()=>{
+      grid.querySelectorAll(".bar-fill").forEach(f=>{ f.style.width = f.dataset.w+"%"; });
+    });
+
+    // wire compare toggles
+    grid.querySelectorAll("[data-cmp]").forEach(btn=>{
+      btn.onclick = ()=>toggleSelect(btn.dataset.cmp);
+    });
+  }
+
+  function toggleSelect(name){
+    if(state.selected.has(name)) state.selected.delete(name);
+    else {
+      if(state.selected.size>=4){ flashTray(t().maxMsg); return; }
+      state.selected.add(name);
+    }
+    renderGrid();
+    updateTray();
+  }
+
+  function updateTray(){
+    const tray = $("#tray");
+    $("#trayCount").textContent = state.selected.size;
+    tray.classList.toggle("show", state.selected.size>=2);
+  }
+  let trayTimer;
+  function flashTray(msg){
+    const lbl = $("#tray .lbl");
+    lbl.innerHTML = '<b>'+msg+'</b>';
+    clearTimeout(trayTimer);
+    trayTimer = setTimeout(()=>{ setTrayLbl(); }, 1400);
+  }
+  function setTrayLbl(){
+    $("#trayLbl").innerHTML = t().traySelected+" <b id=\"trayCount\">"+state.selected.size+"</b>";
+  }
+
+  // ---- compare modal ----
+  function openCompare(){
+    const names = [...state.selected];
+    const cols = MODELS.filter(m=>names.includes(m.name));
+    const table = $("#cmpTable");
+
+    const header = "<thead><tr><th></th>"+cols.map(c=>"<th>"+c.name+"<small>"+c.org.toUpperCase()+"</small></th>").join("")+"</tr></thead>";
+
+    // rows: overall + each bench + context + params + license
+    const rows = [];
+    rows.push(row(t().rowOverall, cols.map(c=>c.overall), c=>c.toFixed(1), true));
+    BENCHES.forEach(b=>{
+      rows.push(row(b.label, cols.map(c=>c[b.key]), c=>c.toFixed(1), true));
+    });
+    rows.push(row(t().rowContext, cols.map(c=>fmtCtx(c.context)), v=>v, false));
+    rows.push(row(t().rowParams, cols.map(c=>fmtParams(c.params)), v=>v, false));
+    rows.push(row(t().rowLicense, cols.map(c=>c.license), v=>v, false));
+
+    table.innerHTML = header + "<tbody>"+rows.join("")+"</tbody>";
+    $("#overlay").classList.add("show");
+    requestAnimationFrame(()=>{
+      table.querySelectorAll(".cmp-bar-fill").forEach(f=>{ f.style.width=f.dataset.w+"%"; });
+    });
+  }
+
+  function row(label, vals, fmt, isScore){
+    let max = -Infinity;
+    if(isScore){ max = Math.max(...vals); }
+    const tds = vals.map(v=>{
+      if(!isScore) return "<td>"+v+"</td>";
+      const best = (max>0 && v===max);
+      const w = max>0 ? (v/max*100) : 0;
+      return '<td class="'+(best?"best":"")+'">'+fmt(v)+
+             '<div class="cmp-bar-wrap"><div class="cmp-bar-track"><span class="cmp-bar-fill" data-w="'+w+'" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></span></div></div></td>';
+    }).join("");
+    return "<tr><th>"+label+"</th>"+tds+"</tr>";
+  }
+
+  // ---- i18n apply ----
+  function applyLang(){
+    const L = t();
+    document.documentElement.lang = state.lang==="zh" ? "zh-Hant" : "en";
+    document.title = state.lang==="zh" ? "NEON://RANK — AI 模型排行榜" : "NEON://RANK — AI Model Leaderboard";
+    $("#brandSub").textContent = L.brandSub;
+    $("#search").placeholder = L.searchPh;
+    $("#sortLbl").textContent = L.sortLbl;
+    const sel = $("#sortKey");
+    [...sel.options].forEach(o=>{ o.textContent = L.sortOpts[o.value]||o.value; });
+    $("#footTxt").textContent = L.footTxt;
+    $("#cmpTitle").textContent = L.cmpTitle;
+    $("#trayClear").textContent = L.trayClear;
+    $("#trayGo").textContent = L.trayGo;
+    setTrayLbl();
+    $("#langBtn").textContent = L.langBtn;
+    tick();
+    renderChips();
+    renderGrid();
+  }
+  $("#langBtn").addEventListener("click", ()=>{
+    state.lang = state.lang==="zh" ? "en" : "zh";
+    localStorage.setItem("nr_lang", state.lang);
+    applyLang();
+  });
+
+  // ---- events ----
+  $("#search").addEventListener("input", e=>{ state.q=e.target.value; renderGrid(); });
+  $("#sortKey").addEventListener("change", e=>{ state.sortKey=e.target.value; renderGrid(); });
+  $("#dirBtn").addEventListener("click", ()=>{ state.dir = state.dir==="desc"?"asc":"desc"; $("#dirBtn").textContent = state.dir==="desc"?"↓":"↑"; renderGrid(); });
+  $("#trayClear").addEventListener("click", ()=>{ state.selected.clear(); renderGrid(); updateTray(); });
+  $("#trayGo").addEventListener("click", openCompare);
+  $("#modalClose").addEventListener("click", ()=>$("#overlay").classList.remove("show"));
+  $("#overlay").addEventListener("click", e=>{ if(e.target===$("#overlay")) $("#overlay").classList.remove("show"); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("#overlay").classList.remove("show"); });
+
+  // ---- clock ----
+  function tick(){
+    const d=new Date();
+    const p=n=>String(n).padStart(2,"0");
+    $("#clock").textContent = t().clockPre+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())+t().clockTz;
+  }
+
+  // ---- init ----
+  applyLang();
+  setInterval(tick,1000); tick();
+  updateTray();
+})();
+</script>
+</body>
+</html>
